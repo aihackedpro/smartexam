@@ -77,9 +77,10 @@ export function HomePage() {
           <p className="mt-3 max-w-xl text-base leading-7 text-sky-100 sm:text-lg">
             พื้นที่ทำงานสำหรับสร้างข้อสอบ เตรียมกระดาษคำตอบ และจัดการผลสอบของครูไทย ในระบบเดียว
           </p>
-          <InstallPrompt />
         </div>
       </section>
+
+      <InstallPrompt />
 
       <section aria-labelledby="quick-actions-heading">
         <div className="mb-3 flex items-end justify-between gap-3">

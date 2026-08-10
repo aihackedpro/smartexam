@@ -60,6 +60,7 @@ export interface AppSettings {
   readonly teacherName: string;
   readonly licenseStatus: LicenseStatus;
   readonly activationHint: string;
+  readonly scanUsageCount: number;
   readonly updatedAt: string;
 }
 

@@ -26,9 +26,9 @@ src/
 │   ├── exams/        # ข้อสอบและชุดข้อสอบ
 │   ├── questions/    # คำถามและตัวเลือก
 │   ├── answer-sheets/# กระดาษคำตอบและงานพิมพ์
-│   ├── scanner/      # flow การสแกนในอนาคต (ยังไม่มี OMR)
+│   ├── scanner/      # OMR จาก template, confidence และ review flow
 │   ├── results/      # รายงานและผลตรวจ
-│   └── licensing/    # ขอบเขตสงวนไว้ ยังไม่มี Activate Key
+│   └── licensing/    # validation ของ Activate Key แบบออฟไลน์
 ├── database/         # Dexie database และ migrations ในอนาคต
 ├── services/         # adapters และ synchronization boundary ในอนาคต
 ├── styles/           # design tokens, global CSS, accessibility behavior
@@ -78,7 +78,7 @@ Vite PWA ใช้ `generateSW` เพื่อ precache ไฟล์ build แ�
 - ไม่มี secret หรือ credential ใน client bundle
 - `.env` เป็น local-only และเฉพาะค่า `VITE_` ที่ตั้งใจเปิดเผยต่อ browser เท่านั้น
 - ไม่มีข้อมูลนักเรียนจริงใน source, tests หรือเอกสาร และ UI แนะนำให้ใช้รหัสแทนชื่อ
-- scanner เก็บ confidence/status และส่งผลกำกวมให้ครูตรวจโดยไม่ให้คะแนนอัตโนมัติ
+- scanner วิเคราะห์ marker/วงคำตอบใน Canvas เก็บ confidence/status และส่งผลกำกวมให้ครูตรวจ
 - online backend และ sync เป็นขอบเขต Phase อนาคต ไม่รวมอยู่ในโครงปัจจุบัน
 
 ## 8. Architecture Decision Notes
@@ -87,4 +87,5 @@ Vite PWA ใช้ `generateSW` เพื่อ precache ไฟล์ build แ�
 - ใช้ navigation config กลางเพื่อรักษาลำดับและชื่อเมนูให้สอดคล้องกัน
 - ใช้ Zod ตรวจ app config เพื่อเตรียมรูปแบบ runtime validation
 - ยังไม่เพิ่ม state management library เพราะ state ข้าม feature สื่อสารผ่าน repository event ขนาดเล็ก
-- ยังไม่เพิ่ม OpenCV.js, API client หรือ Cloudflare package จนกว่าจะอนุมัติการอ่าน OMR และ online service
+- OMR ใช้ Canvas และ integral image ใน browser จึงไม่เพิ่ม OpenCV.js; API client/Cloudflare package
+  ยังรอการอนุมัติ online service

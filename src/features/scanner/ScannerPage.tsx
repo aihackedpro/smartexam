@@ -9,6 +9,7 @@ import {
   Camera,
   Check,
   ClipboardPlus,
+  Image,
   LoaderCircle,
   LockKeyhole,
   RotateCcw,
@@ -31,6 +32,7 @@ import { useStoredData } from '../../hooks/useStoredData';
 import { createId } from '../../lib/identifiers';
 import type { AppSettings, Exam, MarkedAnswer } from '../../types/domain';
 import { scoreAnswers } from '../results/scoring';
+import { CameraCapture } from './CameraCapture';
 import { analyzeAnswerSheet } from './omr';
 
 const loadExams = () => listExams();
@@ -68,6 +70,7 @@ export function ScannerPage() {
   );
   const [message, setMessage] = useState('');
   const [showActivation, setShowActivation] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const selectedExam = useMemo(
     () => exams.find((exam) => exam.id === examId) ?? exams[0],
     [examId, exams],
@@ -215,6 +218,44 @@ export function ScannerPage() {
         </p>
       </div>
 
+      <section
+        aria-labelledby="photo-guide-heading"
+        className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft"
+      >
+        <h2 id="photo-guide-heading" className="text-lg font-extrabold text-navy-900">
+          ถ่ายอย่างไรให้ตรวจแม่น
+        </h2>
+        <ol className="mt-3 grid gap-3 text-sm leading-6 text-slate-700 sm:grid-cols-3">
+          <li className="flex gap-3">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-800 font-extrabold text-white">
+              1
+            </span>
+            <span>
+              <strong className="block text-navy-900">วางกระดาษให้เรียบ</strong>ใช้แสงสม่ำเสมอ
+              ไม่มีเงาหรือแสงสะท้อน
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-800 font-extrabold text-white">
+              2
+            </span>
+            <span>
+              <strong className="block text-navy-900">ให้เห็นทั้งแผ่น</strong>จัดจุดดำ 4
+              มุมให้ตรงเป้าสีเขียว
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-800 font-extrabold text-white">
+              3
+            </span>
+            <span>
+              <strong className="block text-navy-900">ถือกล้องให้ตรง</strong>อย่าเอียง เบลอ
+              หรือบังวงคำตอบ
+            </span>
+          </li>
+        </ol>
+      </section>
+
       {loading ? (
         <p role="status" className="p-6 text-center">
           กำลังเปิดรายการข้อสอบ…
@@ -268,49 +309,54 @@ export function ScannerPage() {
                 className="min-h-12 w-full rounded-xl border border-slate-300 px-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               />
             </label>
-            <label className="sm:col-span-2">
+            <div className="sm:col-span-2">
               <span className="mb-1.5 block text-sm font-bold text-slate-700">ภาพกระดาษคำตอบ</span>
-              <span
-                role={quotaReached ? 'button' : undefined}
-                tabIndex={quotaReached ? 0 : undefined}
-                onClick={() => {
-                  if (quotaReached) setShowActivation(true);
-                }}
-                onKeyDown={(event) => {
-                  if (quotaReached && (event.key === 'Enter' || event.key === ' ')) {
-                    event.preventDefault();
-                    setShowActivation(true);
-                  }
-                }}
-                className={`flex min-h-14 items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 font-bold ${
-                  quotaReached
-                    ? 'cursor-not-allowed border-slate-300 bg-slate-100 text-slate-500'
-                    : 'cursor-pointer border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                }`}
-              >
-                {analysisState === 'analyzing' ? (
-                  <LoaderCircle aria-hidden="true" className="animate-spin" size={22} />
-                ) : (
-                  <Camera aria-hidden="true" size={22} />
-                )}
-                {analysisState === 'analyzing'
-                  ? 'กำลังอ่านคำตอบ…'
-                  : quotaReached
-                    ? 'ครบสิทธิ์ฟรีแล้ว'
-                    : 'ถ่ายภาพและตรวจทันที'}
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  disabled={quotaReached || analysisState === 'analyzing'}
-                  className="sr-only"
-                  onChange={(event) => {
-                    handleImage(event.target.files?.[0]);
-                    event.target.value = '';
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  disabled={analysisState === 'analyzing'}
+                  onClick={() => {
+                    if (quotaReached) setShowActivation(true);
+                    else setCameraOpen(true);
                   }}
-                />
-              </span>
-            </label>
+                  className={`inline-flex min-h-14 items-center justify-center gap-2 rounded-xl px-4 font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 ${
+                    quotaReached
+                      ? 'cursor-not-allowed bg-slate-100 text-slate-500 ring-1 ring-slate-300'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  }`}
+                >
+                  {analysisState === 'analyzing' ? (
+                    <LoaderCircle aria-hidden="true" className="animate-spin" size={22} />
+                  ) : (
+                    <Camera aria-hidden="true" size={22} />
+                  )}
+                  {quotaReached ? 'ครบสิทธิ์ฟรีแล้ว' : 'เปิดกล้องพร้อมกรอบ'}
+                </button>
+                <label
+                  className={`flex min-h-14 items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 font-bold ${
+                    quotaReached
+                      ? 'cursor-not-allowed border-slate-300 bg-slate-100 text-slate-500'
+                      : 'cursor-pointer border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                  }`}
+                >
+                  <Image aria-hidden="true" size={22} />
+                  {quotaReached ? 'ครบสิทธิ์ฟรีแล้ว' : 'เลือกภาพจากเครื่อง'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={quotaReached || analysisState === 'analyzing'}
+                    className="sr-only"
+                    onChange={(event) => {
+                      handleImage(event.target.files?.[0]);
+                      event.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                แนะนำให้ใช้ “เปิดกล้องพร้อมกรอบ” เพื่อจัดตำแหน่งและตัดภาพ A4 อัตโนมัติ
+              </p>
+            </div>
           </section>
 
           {imageUrl ? (
@@ -502,6 +548,16 @@ export function ScannerPage() {
             ) : null}
           </section>
         </div>
+      ) : null}
+
+      {cameraOpen ? (
+        <CameraCapture
+          onCapture={(file) => {
+            setCameraOpen(false);
+            handleImage(file);
+          }}
+          onClose={() => setCameraOpen(false)}
+        />
       ) : null}
     </div>
   );

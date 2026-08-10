@@ -70,6 +70,22 @@ describe('App Shell', () => {
     expect(screen.getByRole('link', { name: /สร้างข้อสอบใหม่/ })).toBeVisible();
     expect(screen.getByRole('link', { name: /พิมพ์กระดาษคำตอบ/ })).toBeVisible();
     expect(screen.getByRole('link', { name: /เริ่มสแกนตรวจ/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'ติดตั้ง SmartExam ลงเครื่อง' })).toBeVisible();
+  });
+
+  it('เปิดคำแนะนำการติดตั้งเมื่อเบราว์เซอร์ไม่มีหน้าติดตั้งอัตโนมัติ', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AppRoutes />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'ติดตั้ง SmartExam ลงเครื่อง' }));
+
+    expect(screen.getByRole('dialog')).toBeVisible();
+    expect(screen.getByRole('heading', { name: /ติดตั้งบน/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'เข้าใจแล้ว' })).toBeVisible();
   });
 
   it('เข้าถึงลิงก์ข้ามเนื้อหาและงานหลักด้วยแป้นพิมพ์ตามลำดับ', async () => {

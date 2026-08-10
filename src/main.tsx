@@ -9,8 +9,10 @@ import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { AppRoutes } from './app/App';
+import { initializePwaInstall } from './lib/pwaInstall';
 import './styles/global.css';
 
+initializePwaInstall();
 registerSW({ immediate: true });
 
 const rootElement = document.getElementById('root');

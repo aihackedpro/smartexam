@@ -23,7 +23,7 @@ SmartExam เป็นเครื่องมือ local-first สำหรั
 5. ส่งคำตอบกำกวมเข้าสถานะรอตรวจโดยไม่เดาหรือให้คะแนน
 6. สรุปคะแนน วิเคราะห์รายข้อ ตรวจทาน และส่งออก CSV
 7. สำรอง/กู้คืน JSON แบบ transaction และไม่สร้างรายการซ้ำ
-8. ตรวจ Activate Key แบบออฟไลน์โดยไม่เก็บ Key เต็ม
+8. ตรวจ Activate Key ที่ลงลายเซ็น ECDSA และผูก Device Key แบบออฟไลน์
 9. PWA, offline app shell และ UI mobile-first ภาษาไทย
 10. ตรวจฟรี 10 แผ่นต่ออุปกรณ์ จากนั้นต้อง Activate โดยการลบผลไม่ทำให้โควตาลดลง
 
@@ -71,7 +71,7 @@ SmartExam เป็นเครื่องมือ local-first สำหรั
 
 - การอ่านกระดาษจากระบบอื่นและ calibration ขั้นสูงสำหรับกล้อง/มุมภาพที่ผิดรูปมาก
 - Cloudflare Workers/D1/R2, authentication และการ sync ข้ามอุปกรณ์
-- ระบบออก/revoke/ย้าย Activate Key จากศูนย์กลาง
+- ระบบ revoke/ย้าย Activate Key และ activation ledger จากศูนย์กลาง
 - AI API ทุกชนิด
 
 ความสามารถเหล่านี้ต้องได้รับ design, security/privacy review และคำสั่งเริ่มงานแยกก่อนเชื่อมบริการจริง

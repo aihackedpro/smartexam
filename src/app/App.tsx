@@ -4,28 +4,50 @@
 ให้เครดิตผู้พัฒนาระบบ
 */
 
+import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
-import { AnswerSheetsPage } from '../features/answer-sheets/AnswerSheetsPage';
-import { ExamsPage } from '../features/exams/ExamsPage';
-import { ResultsPage } from '../features/results/ResultsPage';
-import { ScannerPage } from '../features/scanner/ScannerPage';
 import { HomePage } from './pages/HomePage';
-import { MorePage } from './pages/MorePage';
 import { NotFoundPage } from './pages/NotFoundPage';
+
+const ExamsPage = lazy(() =>
+  import('../features/exams/ExamsPage').then((module) => ({ default: module.ExamsPage })),
+);
+const AnswerSheetsPage = lazy(() =>
+  import('../features/answer-sheets/AnswerSheetsPage').then((module) => ({
+    default: module.AnswerSheetsPage,
+  })),
+);
+const ScannerPage = lazy(() =>
+  import('../features/scanner/ScannerPage').then((module) => ({ default: module.ScannerPage })),
+);
+const ResultsPage = lazy(() =>
+  import('../features/results/ResultsPage').then((module) => ({ default: module.ResultsPage })),
+);
+const MorePage = lazy(() =>
+  import('./pages/MorePage').then((module) => ({ default: module.MorePage })),
+);
 
 export function AppRoutes() {
   return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route index element={<HomePage />} />
-        <Route path="exams" element={<ExamsPage />} />
-        <Route path="answer-sheets" element={<AnswerSheetsPage />} />
-        <Route path="scanner" element={<ScannerPage />} />
-        <Route path="results" element={<ResultsPage />} />
-        <Route path="more" element={<MorePage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
+    <Suspense
+      fallback={
+        <p role="status" className="p-8 text-center font-bold text-navy-900">
+          กำลังเปิดหน้านี้…
+        </p>
+      }
+    >
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route index element={<HomePage />} />
+          <Route path="exams" element={<ExamsPage />} />
+          <Route path="answer-sheets" element={<AnswerSheetsPage />} />
+          <Route path="scanner" element={<ScannerPage />} />
+          <Route path="results" element={<ResultsPage />} />
+          <Route path="more" element={<MorePage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }

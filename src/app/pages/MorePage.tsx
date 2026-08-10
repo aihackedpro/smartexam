@@ -4,35 +4,19 @@
 ให้เครดิตผู้พัฒนาระบบ
 */
 
-import {
-  CheckCircle2,
-  CloudOff,
-  DatabaseBackup,
-  Download,
-  KeyRound,
-  Save,
-  Settings,
-  ShieldCheck,
-  Upload,
-} from 'lucide-react';
+import { DatabaseBackup, Download, Save, Settings, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { PageHeader } from '../../components/PageHeader';
 import { StatusBadge } from '../../components/StatusBadge';
 import { createBackup, getSettings, restoreBackup, saveSettings } from '../../database/repository';
+import { ActivationPanel } from '../../features/licensing/ActivationPanel';
 import { useStoredData } from '../../hooks/useStoredData';
 import type { AppSettings } from '../../types/domain';
-import {
-  normalizeActivationKey,
-  validateActivationKey,
-} from '../../features/licensing/licenseDomain';
-
 const loadSettings = () => getSettings();
 const initialSettings: AppSettings = {
   id: 'app',
   schoolName: '',
   teacherName: '',
-  licenseStatus: 'demo',
-  activationHint: '',
   scanUsageCount: 0,
   updatedAt: new Date(0).toISOString(),
 };
@@ -49,7 +33,6 @@ function downloadBackupFile(source: string): void {
 export function MorePage() {
   const { data: storedSettings, loading } = useStoredData(loadSettings, initialSettings);
   const [draft, setDraft] = useState<AppSettings | null>(null);
-  const [activationKey, setActivationKey] = useState('');
   const [message, setMessage] = useState('');
   const settings = draft ?? storedSettings;
 
@@ -57,22 +40,6 @@ export function MorePage() {
     const saved = await saveSettings(settings);
     setDraft(saved);
     setMessage('บันทึกการตั้งค่าในเครื่องแล้ว');
-  }
-
-  async function handleActivate(): Promise<void> {
-    const normalized = normalizeActivationKey(activationKey);
-    if (!validateActivationKey(normalized)) {
-      setMessage('Activate Key ไม่ถูกต้อง กรุณาตรวจรูปแบบและลองอีกครั้ง');
-      return;
-    }
-    const saved = await saveSettings({
-      ...settings,
-      licenseStatus: 'activated',
-      activationHint: normalized.slice(-4),
-    });
-    setDraft(saved);
-    setActivationKey('');
-    setMessage('เปิดใช้งานบนอุปกรณ์นี้เรียบร้อยแล้ว');
   }
 
   async function handleBackup(): Promise<void> {
@@ -166,7 +133,8 @@ export function MorePage() {
           <StatusBadge tone="success">ข้อมูลอยู่ในเครื่อง</StatusBadge>
         </div>
         <p className="mt-4 text-sm leading-6 text-slate-600">
-          ไฟล์สำรองรวมข้อสอบ ผลตรวจ และการตั้งค่า โปรดเก็บในพื้นที่ส่วนตัวเพราะอาจมีรหัสผู้เข้าสอบ
+          ไฟล์สำรองรวมข้อสอบ ผลตรวจ และชื่อบนเอกสาร แต่ไม่รวม Activate Key, Device Key หรือโควตา
+          โปรดเก็บในพื้นที่ส่วนตัวเพราะอาจมีรหัสผู้เข้าสอบ
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <button
@@ -188,59 +156,7 @@ export function MorePage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="grid size-12 place-items-center rounded-2xl bg-navy-50 text-navy-800">
-              <KeyRound aria-hidden="true" size={25} />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-emerald-700">สิทธิ์การใช้งาน</p>
-              <h2 className="text-xl font-extrabold text-navy-900">SmartExam Version 1.0</h2>
-            </div>
-          </div>
-          <StatusBadge tone={settings.licenseStatus === 'activated' ? 'success' : 'warning'}>
-            {settings.licenseStatus === 'activated'
-              ? 'เปิดใช้งานแล้ว'
-              : `ใช้ฟรี ${settings.scanUsageCount}/10 แผ่น`}
-          </StatusBadge>
-        </div>
-
-        {settings.licenseStatus === 'activated' ? (
-          <div className="mt-5 flex items-start gap-3 rounded-2xl bg-emerald-50 p-4 text-emerald-800">
-            <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0" size={21} />
-            <p className="text-sm leading-6">
-              อุปกรณ์นี้เปิดใช้งานแล้ว • รหัสอ้างอิงลงท้าย {settings.activationHint}
-            </p>
-          </div>
-        ) : (
-          <div className="mt-5">
-            <label>
-              <span className="mb-1.5 block text-sm font-bold text-slate-700">Activate Key</span>
-              <input
-                value={activationKey}
-                onChange={(event) => setActivationKey(event.target.value)}
-                placeholder="SE1-XXXX-XXXX-XX"
-                autoCapitalize="characters"
-                spellCheck={false}
-                className="min-h-12 w-full rounded-xl border border-slate-300 px-3 font-mono uppercase outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => void handleActivate()}
-              className="mt-3 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-navy-800 px-4 font-bold text-white hover:bg-navy-900"
-            >
-              <ShieldCheck aria-hidden="true" size={20} /> เปิดใช้งานบนเครื่องนี้
-            </button>
-          </div>
-        )}
-        <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-500">
-          <CloudOff aria-hidden="true" className="mt-0.5 shrink-0" size={16} />
-          การตรวจ Key รอบนี้ทำแบบออฟไลน์และไม่ส่ง Key ไปยังเซิร์ฟเวอร์ ระบบออก Key
-          และการย้ายสิทธิ์จะเชื่อมกับบริการออนไลน์เมื่อได้รับอนุมัติ
-        </p>
-      </section>
+      <ActivationPanel />
 
       {message ? (
         <p role="status" className="rounded-xl bg-navy-50 p-4 font-semibold text-navy-900">

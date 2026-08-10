@@ -65,8 +65,9 @@ Roadmap นี้แสดงสถานะการพัฒนาหลัง
 - ตรวจฟรี 10 แผ่นต่ออุปกรณ์และ Activate เพื่อปลดจำกัด
 - threat model และ UX สำหรับกรณี offline
 
-- ตรวจรูปแบบ/checksum โดยไม่เก็บ Key เต็มและไม่ส่งออกจากอุปกรณ์
-- ระบบออก Key, revoke และย้ายสิทธิ์ต้องใช้บริการออนไลน์ในอนาคต
+- ตรวจลายเซ็น ECDSA P-256, ผูก Device Key, ตรวจวันหมดอายุและการย้อนเวลาแบบออฟไลน์
+- private signing key อยู่ใน macOS Keychain และมี Owner-only License Authority บน 127.0.0.1
+- ระบบ revoke, ย้ายสิทธิ์และ activation ledger ส่วนกลางต้องใช้บริการออนไลน์ในอนาคต
 
 ## Phase 6 — Optional Online Services
 

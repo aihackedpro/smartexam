@@ -10,6 +10,11 @@ coverage/
 .env.*
 !.env.example
 
+# License authority secrets and emergency exports
+.smartexam-secrets/
+*.private.jwk
+*.license-authority-backup.json
+
 # Editor and operating system files
 .DS_Store
 .idea/

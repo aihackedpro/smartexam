@@ -5,6 +5,7 @@
 */
 
 import { z } from 'zod';
+import { hasActiveLicense } from '../features/licensing/licenseService';
 import type { AppSettings, Exam, ExamResult, SmartExamBackup } from '../types/domain';
 import { database } from './database';
 
@@ -12,8 +13,6 @@ const defaultSettings: AppSettings = {
   id: 'app',
   schoolName: '',
   teacherName: '',
-  licenseStatus: 'demo',
-  activationHint: '',
   scanUsageCount: 0,
   updatedAt: new Date(0).toISOString(),
 };
@@ -76,19 +75,32 @@ const settingsSchema = z.object({
   id: z.literal('app'),
   schoolName: z.string(),
   teacherName: z.string(),
-  licenseStatus: z.enum(['demo', 'activated']),
-  activationHint: z.string(),
   scanUsageCount: z.number().int().nonnegative().default(0),
   updatedAt: z.string(),
 });
 
-const backupSchema = z.object({
+const legacyBackupSchema = z.object({
   format: z.literal('smartexam-backup'),
   version: z.literal(1),
   exportedAt: z.string(),
   exams: z.array(examSchema),
   results: z.array(resultSchema),
-  settings: settingsSchema,
+  settings: z.object({
+    schoolName: z.string(),
+    teacherName: z.string(),
+  }),
+});
+
+const backupSchema = z.object({
+  format: z.literal('smartexam-backup'),
+  version: z.literal(2),
+  exportedAt: z.string(),
+  exams: z.array(examSchema),
+  results: z.array(resultSchema),
+  settings: z.object({
+    schoolName: z.string(),
+    teacherName: z.string(),
+  }),
 });
 
 export function parseExamRecord(source: unknown): Exam | null {
@@ -153,9 +165,10 @@ export async function saveResult(result: ExamResult): Promise<ExamResult> {
 export async function saveNewScanResult(
   result: ExamResult,
 ): Promise<{ readonly result: ExamResult; readonly scanUsageCount: number }> {
+  const licenseActive = await hasActiveLicense();
   const saved = await database.transaction('rw', database.results, database.settings, async () => {
     const settings = await getSettings();
-    if (settings.licenseStatus !== 'activated' && settings.scanUsageCount >= freeScanLimit) {
+    if (!licenseActive && settings.scanUsageCount >= freeScanLimit) {
       throw new ScanLimitReachedError();
     }
 
@@ -201,17 +214,37 @@ export async function createBackup(): Promise<SmartExamBackup> {
   const [exams, results, settings] = await Promise.all([listExams(), listResults(), getSettings()]);
   return {
     format: 'smartexam-backup',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     exams,
     results,
-    settings,
+    settings: {
+      schoolName: settings.schoolName,
+      teacherName: settings.teacherName,
+    },
   };
 }
 
 export async function restoreBackup(source: string): Promise<SmartExamBackup> {
   const parsed: unknown = JSON.parse(source);
-  const backup = backupSchema.parse(parsed);
+  const currentBackup = backupSchema.safeParse(parsed);
+  const legacyBackup = currentBackup.success ? null : legacyBackupSchema.safeParse(parsed);
+  if (!currentBackup.success && (!legacyBackup || !legacyBackup.success)) {
+    throw new Error('รูปแบบไฟล์สำรองไม่ถูกต้อง');
+  }
+  const sourceBackup = currentBackup.success ? currentBackup.data : legacyBackup?.data;
+  if (!sourceBackup) throw new Error('รูปแบบไฟล์สำรองไม่ถูกต้อง');
+  const backup: SmartExamBackup = {
+    format: 'smartexam-backup',
+    version: 2,
+    exportedAt: sourceBackup.exportedAt,
+    exams: sourceBackup.exams,
+    results: sourceBackup.results,
+    settings: {
+      schoolName: sourceBackup.settings.schoolName,
+      teacherName: sourceBackup.settings.teacherName,
+    },
+  };
 
   await database.transaction(
     'rw',
@@ -219,14 +252,16 @@ export async function restoreBackup(source: string): Promise<SmartExamBackup> {
     database.results,
     database.settings,
     async () => {
-      await Promise.all([
-        database.exams.clear(),
-        database.results.clear(),
-        database.settings.clear(),
-      ]);
+      const currentSettings = await getSettings();
+      await Promise.all([database.exams.clear(), database.results.clear()]);
       await database.exams.bulkPut(backup.exams);
       await database.results.bulkPut(backup.results);
-      await database.settings.put(backup.settings);
+      await database.settings.put({
+        ...currentSettings,
+        schoolName: backup.settings.schoolName,
+        teacherName: backup.settings.teacherName,
+        updatedAt: new Date().toISOString(),
+      });
     },
   );
   notifyDataChange();

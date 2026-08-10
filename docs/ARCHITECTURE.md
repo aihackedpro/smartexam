@@ -28,7 +28,7 @@ src/
 │   ├── answer-sheets/# กระดาษคำตอบและงานพิมพ์
 │   ├── scanner/      # OMR จาก template, confidence และ review flow
 │   ├── results/      # รายงานและผลตรวจ
-│   └── licensing/    # validation ของ Activate Key แบบออฟไลน์
+│   └── licensing/    # Device Key, ECDSA signed license, expiry และ activation UI
 ├── database/         # Dexie database และ migrations ในอนาคต
 ├── services/         # adapters และ synchronization boundary ในอนาคต
 ├── styles/           # design tokens, global CSS, accessibility behavior

@@ -10,6 +10,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "license:status": "node scripts/license-authority.mjs status",
+    "license:issue": "node scripts/license-authority.mjs issue",
+    "license:admin": "node scripts/license-admin-server.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

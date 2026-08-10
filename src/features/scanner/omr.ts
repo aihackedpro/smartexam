@@ -4,6 +4,7 @@
 ให้เครดิตผู้พัฒนาระบบ
 */
 
+import { maxQuestionsPerAnswerSheet } from '../../lib/answerSheetLayout';
 import type { Exam, MarkedAnswer } from '../../types/domain';
 
 interface Point {
@@ -32,6 +33,12 @@ export interface FillClassification {
   readonly choice: number | null;
   readonly status: MarkedAnswer['status'];
   readonly confidence: number;
+}
+
+export interface OmrPixelData {
+  readonly data: Uint8ClampedArray;
+  readonly width: number;
+  readonly height: number;
 }
 
 const sheetWidthMm = 194;
@@ -95,7 +102,7 @@ export function templateBubblePosition(
   };
 }
 
-function createDarknessMap(imageData: ImageData): Uint8Array {
+function createDarknessMap(imageData: OmrPixelData): Uint8Array {
   const pixels = imageData.data;
   const darkness = new Uint8Array(imageData.width * imageData.height);
   for (let sourceIndex = 0, targetIndex = 0; sourceIndex < pixels.length; sourceIndex += 4) {
@@ -239,6 +246,57 @@ function sampleDisc(
   return count === 0 ? 0 : total / (count * 255);
 }
 
+export function analyzeImageData(imageData: OmrPixelData, exam: Exam): OmrAnalysis {
+  if (exam.questions.length > maxQuestionsPerAnswerSheet) {
+    throw new Error(`OMR รองรับสูงสุด ${maxQuestionsPerAnswerSheet} ข้อต่อกระดาษหนึ่งแผ่น`);
+  }
+
+  const { width, height } = imageData;
+  const darkness = createDarknessMap(imageData);
+  const markers = detectMarkers(darkness, width, height);
+  const horizontalSpan = Math.hypot(
+    markers.topRight.x - markers.topLeft.x,
+    markers.topRight.y - markers.topLeft.y,
+  );
+  const verticalSpan = Math.hypot(
+    markers.bottomLeft.x - markers.topLeft.x,
+    markers.bottomLeft.y - markers.topLeft.y,
+  );
+  const radius = Math.max(
+    2,
+    Math.min((horizontalSpan * 1.15) / 183.65, (verticalSpan * 1.15) / 270.65),
+  );
+
+  const answers = exam.questions.map((question, questionIndex): MarkedAnswer => {
+    const scores = question.choices.map((_, choiceIndex) => {
+      const position = templateBubblePosition(questionIndex, choiceIndex, question.choices.length);
+      return sampleDisc(darkness, width, height, interpolate(markers, position), radius);
+    });
+    const classification = classifyFillScores(scores);
+    return {
+      questionId: question.id,
+      choice: classification.choice,
+      status: classification.status,
+      confidence: classification.confidence,
+    };
+  });
+  const confidenceValues = answers.map((answer) => answer.confidence ?? 0);
+  const markerQuality =
+    (markers.topLeft.quality +
+      markers.topRight.quality +
+      markers.bottomLeft.quality +
+      markers.bottomRight.quality) /
+    4;
+  return {
+    answers,
+    averageConfidence:
+      confidenceValues.length === 0
+        ? 0
+        : confidenceValues.reduce((total, value) => total + value, 0) / confidenceValues.length,
+    markerQuality,
+  };
+}
+
 async function loadImage(file: File): Promise<{
   readonly source: CanvasImageSource;
   readonly width: number;
@@ -272,8 +330,8 @@ async function loadImage(file: File): Promise<{
 }
 
 export async function analyzeAnswerSheet(file: File, exam: Exam): Promise<OmrAnalysis> {
-  if (exam.questions.length > 60) {
-    throw new Error('OMR รองรับสูงสุด 60 ข้อต่อกระดาษหนึ่งแผ่น');
+  if (exam.questions.length > maxQuestionsPerAnswerSheet) {
+    throw new Error(`OMR รองรับสูงสุด ${maxQuestionsPerAnswerSheet} ข้อต่อกระดาษหนึ่งแผ่น`);
   }
   const image = await loadImage(file);
   try {
@@ -286,53 +344,7 @@ export async function analyzeAnswerSheet(file: File, exam: Exam): Promise<OmrAna
     const context = canvas.getContext('2d', { willReadFrequently: true });
     if (!context) throw new Error('อุปกรณ์นี้ไม่รองรับการวิเคราะห์ภาพ');
     context.drawImage(image.source, 0, 0, width, height);
-    const darkness = createDarknessMap(context.getImageData(0, 0, width, height));
-    const markers = detectMarkers(darkness, width, height);
-    const horizontalSpan = Math.hypot(
-      markers.topRight.x - markers.topLeft.x,
-      markers.topRight.y - markers.topLeft.y,
-    );
-    const verticalSpan = Math.hypot(
-      markers.bottomLeft.x - markers.topLeft.x,
-      markers.bottomLeft.y - markers.topLeft.y,
-    );
-    const radius = Math.max(
-      2,
-      Math.min((horizontalSpan * 1.15) / 183.65, (verticalSpan * 1.15) / 270.65),
-    );
-
-    const answers = exam.questions.map((question, questionIndex): MarkedAnswer => {
-      const scores = question.choices.map((_, choiceIndex) => {
-        const position = templateBubblePosition(
-          questionIndex,
-          choiceIndex,
-          question.choices.length,
-        );
-        return sampleDisc(darkness, width, height, interpolate(markers, position), radius);
-      });
-      const classification = classifyFillScores(scores);
-      return {
-        questionId: question.id,
-        choice: classification.choice,
-        status: classification.status,
-        confidence: classification.confidence,
-      };
-    });
-    const confidenceValues = answers.map((answer) => answer.confidence ?? 0);
-    const markerQuality =
-      (markers.topLeft.quality +
-        markers.topRight.quality +
-        markers.bottomLeft.quality +
-        markers.bottomRight.quality) /
-      4;
-    return {
-      answers,
-      averageConfidence:
-        confidenceValues.length === 0
-          ? 0
-          : confidenceValues.reduce((total, value) => total + value, 0) / confidenceValues.length,
-      markerQuality,
-    };
+    return analyzeImageData(context.getImageData(0, 0, width, height), exam);
   } finally {
     image.dispose();
   }

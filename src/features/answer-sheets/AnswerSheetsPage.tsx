@@ -11,6 +11,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { PageHeader } from '../../components/PageHeader';
 import { listExams } from '../../database/repository';
 import { useStoredData } from '../../hooks/useStoredData';
+import { isExamReadyForScanning, maxQuestionsPerAnswerSheet } from '../../lib/answerSheetLayout';
 import type { Exam } from '../../types/domain';
 
 const loadExams = () => listExams();
@@ -24,6 +25,9 @@ export function AnswerSheetsPage() {
     () => exams.find((exam) => exam.id === requestedId) ?? exams[0],
     [exams, requestedId],
   );
+  const readyToPrint = selectedExam
+    ? isExamReadyForScanning(selectedExam.questions.length, selectedExam.status)
+    : false;
 
   function selectExam(examId: string): void {
     setSearchParams(examId ? { exam: examId } : {});
@@ -41,7 +45,7 @@ export function AnswerSheetsPage() {
             <button
               type="button"
               onClick={() => window.print()}
-              disabled={!selectedExam}
+              disabled={!readyToPrint}
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-4 font-bold text-navy-900 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300 disabled:opacity-50"
             >
               <Printer aria-hidden="true" size={20} /> พิมพ์ / บันทึก PDF
@@ -90,9 +94,15 @@ export function AnswerSheetsPage() {
             <p className="mt-3 text-sm leading-6 text-amber-800">
               ควรพิมพ์ที่ขนาด 100% และไม่เลือก “Fit to page” เพื่อรักษาสัดส่วนสำหรับการถ่ายภาพ
             </p>
-            {selectedExam.questions.length > 60 ? (
+            {selectedExam.status !== 'ready' ? (
               <p role="alert" className="mt-2 text-sm font-bold text-rose-700">
-                OMR รองรับสูงสุด 60 ข้อต่อกระดาษหนึ่งแผ่น กรุณาแบ่งข้อสอบเป็นหลายชุด
+                ข้อสอบนี้ยังเป็นฉบับร่าง กรุณาตรวจข้อมูลและทำเครื่องหมายว่าพร้อมใช้ก่อนพิมพ์
+              </p>
+            ) : null}
+            {selectedExam.questions.length > maxQuestionsPerAnswerSheet ? (
+              <p role="alert" className="mt-2 text-sm font-bold text-rose-700">
+                OMR รองรับสูงสุด {maxQuestionsPerAnswerSheet} ข้อต่อกระดาษหนึ่งแผ่น
+                กรุณาแบ่งข้อสอบเป็นหลายชุด
               </p>
             ) : null}
           </section>

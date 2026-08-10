@@ -28,6 +28,7 @@ import {
   ScanLimitReachedError,
 } from '../../database/repository';
 import { useStoredData } from '../../hooks/useStoredData';
+import { isExamReadyForScanning } from '../../lib/answerSheetLayout';
 import { createId } from '../../lib/identifiers';
 import type { Exam, MarkedAnswer } from '../../types/domain';
 import { getActivationOverview, initialActivationOverview } from '../licensing/licenseService';
@@ -62,9 +63,13 @@ export function ScannerPage() {
   const [message, setMessage] = useState('');
   const [showActivation, setShowActivation] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const scannableExams = useMemo(
+    () => exams.filter((exam) => isExamReadyForScanning(exam.questions.length, exam.status)),
+    [exams],
+  );
   const selectedExam = useMemo(
-    () => exams.find((exam) => exam.id === examId) ?? exams[0],
-    [examId, exams],
+    () => scannableExams.find((exam) => exam.id === examId) ?? scannableExams[0],
+    [examId, scannableExams],
   );
   const quotaReached = !activation.active && activation.scanUsageCount >= freeScanLimit;
 
@@ -251,12 +256,14 @@ export function ScannerPage() {
           กำลังเปิดรายการข้อสอบ…
         </p>
       ) : null}
-      {!loading && exams.length === 0 ? (
+      {!loading && scannableExams.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-6 text-center sm:p-10">
           <ClipboardPlus aria-hidden="true" className="mx-auto text-navy-700" size={38} />
-          <h2 className="mt-3 text-xl font-extrabold text-navy-900">สร้างข้อสอบก่อนเริ่มสแกน</h2>
+          <h2 className="mt-3 text-xl font-extrabold text-navy-900">
+            เตรียมข้อสอบให้พร้อมก่อนเริ่มสแกน
+          </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            ระบบต้องใช้เฉลยและตำแหน่งวงคำตอบของข้อสอบเพื่อคำนวณคะแนน
+            ระบบแสดงเฉพาะข้อสอบที่ตรวจข้อมูลและทำเครื่องหมาย “พร้อมใช้” แล้ว สูงสุด 60 ข้อต่อแผ่น
           </p>
           <Link
             to="/exams"
@@ -283,7 +290,7 @@ export function ScannerPage() {
                 }}
                 className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
-                {exams.map((exam) => (
+                {scannableExams.map((exam) => (
                   <option key={exam.id} value={exam.id}>
                     {exam.title}
                   </option>

@@ -41,7 +41,7 @@ offline/reconnect และ retry โดยไม่สร้างข้อม�
 - ปุ่มงานหลัก 3 รายการ
 - Footer และเครดิตครบถ้วน
 - scoring ที่ยืนยันแล้ว คำตอบว่าง และคำตอบกำกวม
-- OMR fill classification และพิกัด template สองคอลัมน์
+- OMR fill classification, พิกัด template สองคอลัมน์ และ pipeline จากพิกเซลจริงที่ค้นหา marker อ่านวงว่าง/ชัด/หลายวง และปฏิเสธภาพไม่มี marker
 - validation ของข้อสอบและ Activate Key: ลายเซ็น, ผิดเครื่อง, หมดอายุ และเวลาไม่ถูกต้อง
 - IndexedDB persistence, revision, scan quota, transaction delete และ backup/restore แบบ idempotent
 

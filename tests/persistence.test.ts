@@ -113,31 +113,36 @@ describe('การบันทึกข้อมูล local-first', () => {
     await expect(getSettings()).resolves.toMatchObject({ scanUsageCount: freeScanLimit });
   });
 
-  it('ปลดข้อจำกัดจำนวนแผ่นหลัง Activate', async () => {
-    const exam = await saveExam(createExam());
-    const timestamp = new Date().toISOString();
+  it('ไม่สำรองหรือกู้คืนสิทธิ์ Activate และไม่รีเซ็ตโควตาจากไฟล์ Backup', async () => {
     const settings = await getSettings();
     await saveSettings({
       ...settings,
-      licenseStatus: 'activated',
-      activationHint: 'TEST',
-      scanUsageCount: freeScanLimit,
+      schoolName: 'ก่อนกู้คืน',
+      scanUsageCount: 7,
     });
+    const backup = await createBackup();
+    expect(backup.settings).toEqual({ schoolName: 'ก่อนกู้คืน', teacherName: '' });
+    expect(backup.settings).not.toHaveProperty('scanUsageCount');
 
-    await expect(
-      saveNewScanResult({
-        id: 'activated-result',
-        examId: exam.id,
-        examineeCode: 'TEST-ACTIVE',
-        answers: [],
-        score: 0,
-        maxScore: 1,
-        reviewStatus: 'complete',
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        revision: 0,
-        syncState: 'local',
-      }),
-    ).resolves.toMatchObject({ scanUsageCount: freeScanLimit + 1 });
+    const maliciousLegacyBackup = {
+      ...backup,
+      version: 1,
+      settings: {
+        id: 'app',
+        schoolName: 'จากไฟล์เก่า',
+        teacherName: 'ครูทดสอบ',
+        licenseStatus: 'activated',
+        activationHint: 'HACK',
+        scanUsageCount: 0,
+        updatedAt: new Date().toISOString(),
+      },
+    };
+    await restoreBackup(JSON.stringify(maliciousLegacyBackup));
+
+    await expect(getSettings()).resolves.toMatchObject({
+      schoolName: 'จากไฟล์เก่า',
+      teacherName: 'ครูทดสอบ',
+      scanUsageCount: 7,
+    });
   });
 });

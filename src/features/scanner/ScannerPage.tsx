@@ -23,30 +23,21 @@ import { PageHeader } from '../../components/PageHeader';
 import { StatusBadge } from '../../components/StatusBadge';
 import {
   freeScanLimit,
-  getSettings,
   listExams,
   saveNewScanResult,
   ScanLimitReachedError,
 } from '../../database/repository';
 import { useStoredData } from '../../hooks/useStoredData';
 import { createId } from '../../lib/identifiers';
-import type { AppSettings, Exam, MarkedAnswer } from '../../types/domain';
+import type { Exam, MarkedAnswer } from '../../types/domain';
+import { getActivationOverview, initialActivationOverview } from '../licensing/licenseService';
 import { scoreAnswers } from '../results/scoring';
 import { CameraCapture } from './CameraCapture';
 import { analyzeAnswerSheet } from './omr';
 
 const loadExams = () => listExams();
-const loadSettings = () => getSettings();
+const loadActivationOverview = () => getActivationOverview();
 const choiceLabels = ['ก', 'ข', 'ค', 'ง', 'จ'];
-const initialSettings: AppSettings = {
-  id: 'app',
-  schoolName: '',
-  teacherName: '',
-  licenseStatus: 'demo',
-  activationHint: '',
-  scanUsageCount: 0,
-  updatedAt: new Date(0).toISOString(),
-};
 
 function createBlankAnswers(exam: Exam): readonly MarkedAnswer[] {
   return exam.questions.map((question) => ({
@@ -59,7 +50,7 @@ function createBlankAnswers(exam: Exam): readonly MarkedAnswer[] {
 
 export function ScannerPage() {
   const { data: exams, loading } = useStoredData(loadExams, [] as readonly Exam[]);
-  const { data: settings } = useStoredData(loadSettings, initialSettings);
+  const { data: activation } = useStoredData(loadActivationOverview, initialActivationOverview);
   const [examId, setExamId] = useState('');
   const [examineeCode, setExamineeCode] = useState('');
   const [answers, setAnswers] = useState<readonly MarkedAnswer[]>([]);
@@ -75,8 +66,7 @@ export function ScannerPage() {
     () => exams.find((exam) => exam.id === examId) ?? exams[0],
     [examId, exams],
   );
-  const quotaReached =
-    settings.licenseStatus !== 'activated' && settings.scanUsageCount >= freeScanLimit;
+  const quotaReached = !activation.active && activation.scanUsageCount >= freeScanLimit;
 
   useEffect(
     () => () => {
@@ -169,7 +159,7 @@ export function ScannerPage() {
       setImageFile(null);
       if (imageUrl) URL.revokeObjectURL(imageUrl);
       setImageUrl('');
-      if (saved.scanUsageCount >= freeScanLimit && settings.licenseStatus !== 'activated') {
+      if (saved.scanUsageCount >= freeScanLimit && !activation.active) {
         setShowActivation(true);
       }
     } catch (error) {
@@ -200,10 +190,10 @@ export function ScannerPage() {
         description="ถ่ายกระดาษคำตอบ SmartExam ระบบค้นหาจุดสี่มุม อ่านวงคำตอบ คำนวณคะแนน และส่งเฉพาะข้อที่ไม่ชัดให้ครูยืนยัน"
         icon={ScanLine}
         action={
-          <StatusBadge tone={settings.licenseStatus === 'activated' ? 'success' : 'warning'}>
-            {settings.licenseStatus === 'activated'
+          <StatusBadge tone={activation.active ? 'success' : 'warning'}>
+            {activation.active
               ? 'ไม่จำกัดจำนวนแผ่น'
-              : `ใช้ฟรี ${settings.scanUsageCount}/${freeScanLimit} แผ่น`}
+              : `ใช้ฟรี ${activation.scanUsageCount}/${freeScanLimit} แผ่น`}
           </StatusBadge>
         }
       />

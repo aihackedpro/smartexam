@@ -42,7 +42,7 @@ offline/reconnect และ retry โดยไม่สร้างข้อม�
 - Footer และเครดิตครบถ้วน
 - scoring ที่ยืนยันแล้ว คำตอบว่าง และคำตอบกำกวม
 - OMR fill classification และพิกัด template สองคอลัมน์
-- validation ของข้อสอบและ Activate Key
+- validation ของข้อสอบและ Activate Key: ลายเซ็น, ผิดเครื่อง, หมดอายุ และเวลาไม่ถูกต้อง
 - IndexedDB persistence, revision, scan quota, transaction delete และ backup/restore แบบ idempotent
 
 นอกจากนี้ตรวจ build output ว่ามี web manifest, service worker และไอคอน PWA

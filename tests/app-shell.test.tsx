@@ -56,7 +56,7 @@ describe('App Shell', () => {
 
     await user.click(screen.getByRole('link', { name: 'รายงานผล' }));
 
-    expect(screen.getByRole('heading', { name: 'รายงานผล' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'รายงานผล' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'รายงานผล' })).toHaveAttribute('aria-current', 'page');
   });
 
@@ -86,6 +86,26 @@ describe('App Shell', () => {
     expect(screen.getByRole('dialog')).toBeVisible();
     expect(screen.getByRole('heading', { name: /ติดตั้งบน/ })).toBeVisible();
     expect(screen.getByRole('button', { name: 'เข้าใจแล้ว' })).toBeVisible();
+  });
+
+  it('แสดงหน้าซื้อ Activate Key และลิงก์ Messenger อย่างเป็นทางการ', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/more']}>
+        <AppRoutes />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'ซื้อระบบหรือขอ Activate Key' }));
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('1 เดือน');
+    expect(screen.getByRole('dialog')).toHaveTextContent('19 บาท');
+    expect(screen.getByRole('dialog')).toHaveTextContent('99 บาท');
+    expect(screen.getByRole('dialog')).toHaveTextContent('199 บาท');
+    expect(screen.getByRole('link', { name: 'ติดต่อผ่าน Messenger' })).toHaveAttribute(
+      'href',
+      'https://m.me/suebsing',
+    );
   });
 
   it('เข้าถึงลิงก์ข้ามเนื้อหาและงานหลักด้วยแป้นพิมพ์ตามลำดับ', async () => {

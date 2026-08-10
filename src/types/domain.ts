@@ -52,23 +52,55 @@ export interface ExamResult {
   readonly syncState: SyncState;
 }
 
-export type LicenseStatus = 'demo' | 'activated';
-
 export interface AppSettings {
   readonly id: 'app';
   readonly schoolName: string;
   readonly teacherName: string;
-  readonly licenseStatus: LicenseStatus;
-  readonly activationHint: string;
   readonly scanUsageCount: number;
   readonly updatedAt: string;
 }
 
+export type LicensePlan = 'month' | 'year' | 'lifetime';
+
+export interface LicenseClaims {
+  readonly version: 2;
+  readonly app: 'smartexam';
+  readonly keyId: string;
+  readonly licenseId: string;
+  readonly deviceHash: string;
+  readonly plan: LicensePlan;
+  readonly issuedAt: string;
+  readonly expiresAt: string | null;
+}
+
+export interface DeviceIdentityRecord {
+  readonly id: 'device';
+  readonly publicKey: JsonWebKey;
+  readonly privateKey: CryptoKey;
+  readonly fingerprint: string;
+  readonly deviceCode: string;
+  readonly createdAt: string;
+}
+
+export interface LicenseRecord {
+  readonly id: 'license';
+  readonly token: string;
+  readonly claims: LicenseClaims;
+  readonly activatedAt: string;
+  readonly lastTrustedAt: string;
+  readonly updatedAt: string;
+}
+
+export interface BackupSettings {
+  readonly schoolName: string;
+  readonly teacherName: string;
+}
+
 export interface SmartExamBackup {
   readonly format: 'smartexam-backup';
-  readonly version: 1;
+  readonly version: 2;
   readonly exportedAt: string;
   readonly exams: readonly Exam[];
   readonly results: readonly ExamResult[];
-  readonly settings: AppSettings;
+  readonly settings: BackupSettings;
 }

@@ -6,8 +6,8 @@ SmartExam คือ Progressive Web App แบบ mobile-first สำหรั�
 
 เวอร์ชันปัจจุบันรองรับ workflow ในเครื่องครบตั้งแต่สร้างข้อสอบจนถึงส่งออกคะแนน
 การตรวจจากภาพใช้ OMR ใน browser ค้นหา marker สี่มุมและอ่านวงคำตอบอัตโนมัติ
-โดยส่งเฉพาะผลกำกวมให้ครูยืนยัน ส่วน Cloud sync และระบบออก Activate Key ส่วนกลาง
-ยังไม่เชื่อมบริการ production
+โดยส่งเฉพาะผลกำกวมให้ครูยืนยัน ระบบ Activate ใช้ใบอนุญาต ECDSA แบบผูกกับการติดตั้ง
+และตรวจแบบออฟไลน์ ส่วน Cloud sync และ activation ledger ส่วนกลางยังไม่เชื่อม production
 
 ## เทคโนโลยี
 
@@ -42,6 +42,9 @@ npm run preview      # เปิด production build สำหรับทดส
 npm run lint         # ตรวจ ESLint
 npm run test         # รัน automated tests หนึ่งครั้ง
 npm run test:watch   # รัน tests แบบเฝ้าดูไฟล์
+npm run license:status # ตรวจ private signing key ใน macOS Keychain
+npm run license:admin  # เปิดศูนย์ออก Activate Key สำหรับเจ้าของบนเครื่องนี้
+npm run license:issue -- --device "SME-D1-..." --plan year # ออก Activate Key
 npm run build        # ตรวจ TypeScript และสร้าง production build
 npm run format       # จัดรูปแบบไฟล์ด้วย Prettier
 npm run format:check # ตรวจรูปแบบโดยไม่แก้ไฟล์
@@ -69,7 +72,8 @@ docs/                    # เอกสารผลิตภัณฑ์แล�
 
 รายละเอียดเพิ่มเติมอยู่ใน [ข้อกำหนดผลิตภัณฑ์](docs/PRODUCT_REQUIREMENTS.md),
 [สถาปัตยกรรม](docs/ARCHITECTURE.md), [แผนงาน](docs/ROADMAP.md) และ
-[กลยุทธ์การทดสอบ](docs/TESTING_STRATEGY.md)
+[กลยุทธ์การทดสอบ](docs/TESTING_STRATEGY.md) รวมถึง
+[ความปลอดภัยของระบบ License](docs/LICENSING_SECURITY.md)
 
 ## ความสามารถหลัก
 
@@ -78,7 +82,7 @@ docs/                    # เอกสารผลิตภัณฑ์แล�
 - เปิดกล้องพร้อมกรอบ A4 เป้า marker 4 มุม และเส้นกึ่งกลาง หรือเลือกภาพจากเครื่อง เพื่ออ่าน OMR อัตโนมัติ พร้อม confidence/รอตรวจ
 - คำนวณคะแนนเฉพาะคำตอบที่ยืนยันแล้ว และตรวจทานรายการกำกวมภายหลัง
 - รายงานคะแนนเฉลี่ย สูงสุด ต่ำสุด วิเคราะห์รายข้อ และส่งออก CSV
-- ตรวจฟรี 10 แผ่นต่ออุปกรณ์ จากนั้นใช้ Activate Key แบบออฟไลน์เพื่อปลดจำกัด
+- ตรวจฟรี 10 แผ่นต่อการติดตั้ง จากนั้นใช้ Activate Key ที่ลงลายเซ็นและผูกกับ Device Key เพื่อปลดจำกัด
 - สำรอง/กู้คืนข้อมูลเป็น JSON โดยจำนวนแผ่นที่ใช้ไม่รีเซ็ตเมื่อลบผล
 
 ## การใช้งานแบบ PWA
@@ -94,7 +98,7 @@ Production build จะสร้าง web app manifest และ service worker
 - ใช้รหัสผู้เข้าสอบแทนชื่อจริง และไม่มีข้อมูลนักเรียนจริงใน source/test
 - คำตอบกำกวมไม่มีคะแนนจนกว่าครูจะยืนยัน
 - ไฟล์สำรองอาจมีรหัสผู้เข้าสอบ ผู้ใช้ต้องเก็บในพื้นที่ส่วนตัว
-- ไม่มี secret, AI API หรือข้อมูลที่ส่งไปยัง Cloud ในเวอร์ชันนี้
+- ไม่มี private signing key, secret, AI API หรือข้อมูลที่ส่งไปยัง Cloud ใน PWA
 
 ## เครดิต
 

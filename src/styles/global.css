@@ -1,0 +1,139 @@
+/*
+ออกแบบและพัฒนาโดย
+ครูโต้ง | hAcKEdpRO | Pongwattana Suebsing
+ให้เครดิตผู้พัฒนาระบบ
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif;
+
+  --color-navy-50: #eef6fa;
+  --color-navy-100: #d8eaf3;
+  --color-navy-700: #1b587c;
+  --color-navy-800: #0f3d5e;
+  --color-navy-900: #0a2d47;
+
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+
+  --shadow-soft: 0 10px 30px rgb(15 61 94 / 0.08);
+  --shadow-navy: 0 14px 32px rgb(15 61 94 / 0.2);
+  --shadow-emerald: 0 14px 32px rgb(5 150 105 / 0.18);
+  --shadow-nav: 0 -8px 30px rgb(15 23 42 / 0.08);
+}
+
+@layer base {
+  :root {
+    font-family: var(--font-sans);
+    color: #0f172a;
+    background: #f4f7f9;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background: #f4f7f9;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@utility bg-app {
+  background: radial-gradient(circle at 100% 0%, rgb(5 150 105 / 0.08), transparent 25rem), #f4f7f9;
+}
+
+@utility bottom-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.sheet-marker {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #000;
+  background: #000;
+  box-shadow: inset 0 0 0 3px #fff;
+}
+
+.answer-bubble {
+  display: inline-grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  border: 1.5px solid #000;
+  border-radius: 999px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible;
+  }
+
+  .print-sheet {
+    position: absolute;
+    inset: 0;
+    width: 194mm;
+    min-height: 281mm;
+    margin: 0;
+    padding: 10mm;
+    overflow: visible;
+    box-shadow: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .answer-row {
+    break-inside: avoid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

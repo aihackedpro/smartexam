@@ -33,6 +33,7 @@ const initialSettings: AppSettings = {
   teacherName: '',
   licenseStatus: 'demo',
   activationHint: '',
+  scanUsageCount: 0,
   updatedAt: new Date(0).toISOString(),
 };
 
@@ -199,7 +200,9 @@ export function MorePage() {
             </div>
           </div>
           <StatusBadge tone={settings.licenseStatus === 'activated' ? 'success' : 'warning'}>
-            {settings.licenseStatus === 'activated' ? 'เปิดใช้งานแล้ว' : 'DEMO'}
+            {settings.licenseStatus === 'activated'
+              ? 'เปิดใช้งานแล้ว'
+              : `ใช้ฟรี ${settings.scanUsageCount}/10 แผ่น`}
           </StatusBadge>
         </div>
 

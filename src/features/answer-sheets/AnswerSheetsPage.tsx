@@ -90,6 +90,11 @@ export function AnswerSheetsPage() {
             <p className="mt-3 text-sm leading-6 text-amber-800">
               ควรพิมพ์ที่ขนาด 100% และไม่เลือก “Fit to page” เพื่อรักษาสัดส่วนสำหรับการถ่ายภาพ
             </p>
+            {selectedExam.questions.length > 60 ? (
+              <p role="alert" className="mt-2 text-sm font-bold text-rose-700">
+                OMR รองรับสูงสุด 60 ข้อต่อกระดาษหนึ่งแผ่น กรุณาแบ่งข้อสอบเป็นหลายชุด
+              </p>
+            ) : null}
           </section>
 
           <article className="print-sheet relative mx-auto min-h-[297mm] w-full max-w-[210mm] overflow-hidden bg-white p-5 text-black shadow-xl sm:p-8">
@@ -98,7 +103,7 @@ export function AnswerSheetsPage() {
             <span className="sheet-marker bottom-3 left-3" aria-hidden="true" />
             <span className="sheet-marker bottom-3 right-3" aria-hidden="true" />
 
-            <header className="border-b-2 border-black pb-4 text-center">
+            <header className="sheet-header border-b-2 border-black pb-4 text-center">
               <p className="text-xs font-bold tracking-[0.25em]">SMARTEXAM ANSWER SHEET</p>
               <h2 className="mt-2 text-xl font-black sm:text-2xl">{selectedExam.title}</h2>
               <p className="mt-1 text-sm">
@@ -106,25 +111,31 @@ export function AnswerSheetsPage() {
               </p>
             </header>
 
-            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <div className="sheet-student mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <p className="border-b border-black pb-1">รหัสผู้เข้าสอบ ____________________</p>
               <p className="border-b border-black pb-1">ห้อง / เลขที่ ____________________</p>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-x-7 gap-y-2 min-[480px]:grid-cols-2">
+            <div className="answer-grid mt-5 grid grid-cols-1 gap-x-7 gap-y-2 min-[480px]:grid-cols-2">
               {selectedExam.questions.map((question, index) => (
                 <div
                   key={question.id}
                   className="answer-row flex break-inside-avoid items-center gap-2 border-b border-dotted border-slate-400 py-1.5"
                 >
                   <span className="w-7 shrink-0 text-right text-sm font-bold">{index + 1}.</span>
-                  <div className="flex flex-1 justify-around gap-1">
+                  <div
+                    className="answer-options grid flex-1 gap-1"
+                    style={{
+                      gridTemplateColumns: `repeat(${question.choices.length}, minmax(0, 1fr))`,
+                    }}
+                  >
                     {question.choices.map((_, choiceIndex) => (
                       <span
                         key={`${question.id}-${choiceIndex}`}
-                        className="flex items-center gap-1 text-xs"
+                        className="answer-choice flex items-center justify-center gap-1 text-xs"
                       >
-                        <span className="answer-bubble">{choiceLabels[choiceIndex]}</span>
+                        <span className="choice-label">{choiceLabels[choiceIndex]}</span>
+                        <span className="answer-bubble" aria-hidden="true" />
                       </span>
                     ))}
                   </div>

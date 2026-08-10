@@ -1,0 +1,16 @@
+<!--
+ออกแบบและพัฒนาโดย
+ครูโต้ง | hAcKEdpRO | Pongwattana Suebsing
+ให้เครดิตผู้พัฒนาระบบ
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1940" height="2810" viewBox="0 0 1940 2810">
+  <rect width="1940" height="2810" fill="white" />
+  <rect x="32" y="32" width="40" height="40" fill="black" />
+  <rect x="1868" y="32" width="40" height="40" fill="black" />
+  <rect x="32" y="2738" width="40" height="40" fill="black" />
+  <rect x="1868" y="2738" width="40" height="40" fill="black" />
+  <circle cx="305" cy="535" r="20" fill="black" />
+  <circle cx="490" cy="535" r="20" fill="white" stroke="black" stroke-width="5" />
+  <circle cx="675" cy="535" r="20" fill="white" stroke="black" stroke-width="5" />
+  <circle cx="860" cy="535" r="20" fill="white" stroke="black" stroke-width="5" />
+</svg>

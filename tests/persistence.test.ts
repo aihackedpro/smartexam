@@ -9,11 +9,17 @@ import { database } from '../src/database/database';
 import {
   createBackup,
   deleteExam,
+  deleteResult,
+  freeScanLimit,
+  getSettings,
   listExams,
   listResults,
   restoreBackup,
   saveExam,
+  saveNewScanResult,
   saveResult,
+  saveSettings,
+  ScanLimitReachedError,
 } from '../src/database/repository';
 import { createExam } from '../src/features/exams/examDomain';
 
@@ -79,5 +85,59 @@ describe('การบันทึกข้อมูล local-first', () => {
     await expect(restoreBackup('{"format":"unknown"}')).rejects.toBeTruthy();
     const exams = await listExams();
     expect(exams[0]?.title).toBe('ห้ามหาย');
+  });
+
+  it('อนุญาตตรวจฟรีสิบแผ่นและไม่รีเซ็ตโควตาเมื่อลบผล', async () => {
+    const exam = await saveExam(createExam());
+    const timestamp = new Date().toISOString();
+    const makeResult = (sequence: number) => ({
+      id: `quota-result-${sequence}`,
+      examId: exam.id,
+      examineeCode: `TEST-${sequence}`,
+      answers: [],
+      score: 0,
+      maxScore: 1,
+      reviewStatus: 'complete' as const,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      revision: 0,
+      syncState: 'local' as const,
+    });
+
+    for (let sequence = 1; sequence <= freeScanLimit; sequence += 1) {
+      await saveNewScanResult(makeResult(sequence));
+    }
+    await deleteResult('quota-result-1');
+
+    await expect(saveNewScanResult(makeResult(11))).rejects.toBeInstanceOf(ScanLimitReachedError);
+    await expect(getSettings()).resolves.toMatchObject({ scanUsageCount: freeScanLimit });
+  });
+
+  it('ปลดข้อจำกัดจำนวนแผ่นหลัง Activate', async () => {
+    const exam = await saveExam(createExam());
+    const timestamp = new Date().toISOString();
+    const settings = await getSettings();
+    await saveSettings({
+      ...settings,
+      licenseStatus: 'activated',
+      activationHint: 'TEST',
+      scanUsageCount: freeScanLimit,
+    });
+
+    await expect(
+      saveNewScanResult({
+        id: 'activated-result',
+        examId: exam.id,
+        examineeCode: 'TEST-ACTIVE',
+        answers: [],
+        score: 0,
+        maxScore: 1,
+        reviewStatus: 'complete',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        revision: 0,
+        syncState: 'local',
+      }),
+    ).resolves.toMatchObject({ scanUsageCount: freeScanLimit + 1 });
   });
 });

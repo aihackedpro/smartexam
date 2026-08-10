@@ -14,8 +14,18 @@ const defaultSettings: AppSettings = {
   teacherName: '',
   licenseStatus: 'demo',
   activationHint: '',
+  scanUsageCount: 0,
   updatedAt: new Date(0).toISOString(),
 };
+
+export const freeScanLimit = 10;
+
+export class ScanLimitReachedError extends Error {
+  constructor() {
+    super('ครบสิทธิ์ตรวจฟรี 10 แผ่นแล้ว กรุณา Activate เพื่อใช้งานต่อ');
+    this.name = 'ScanLimitReachedError';
+  }
+}
 
 const dataChangeEvent = 'smartexam:data-change';
 
@@ -68,6 +78,7 @@ const settingsSchema = z.object({
   teacherName: z.string(),
   licenseStatus: z.enum(['demo', 'activated']),
   activationHint: z.string(),
+  scanUsageCount: z.number().int().nonnegative().default(0),
   updatedAt: z.string(),
 });
 
@@ -139,13 +150,44 @@ export async function saveResult(result: ExamResult): Promise<ExamResult> {
   return saved;
 }
 
+export async function saveNewScanResult(
+  result: ExamResult,
+): Promise<{ readonly result: ExamResult; readonly scanUsageCount: number }> {
+  const saved = await database.transaction('rw', database.results, database.settings, async () => {
+    const settings = await getSettings();
+    if (settings.licenseStatus !== 'activated' && settings.scanUsageCount >= freeScanLimit) {
+      throw new ScanLimitReachedError();
+    }
+
+    const nextResult: ExamResult = {
+      ...result,
+      updatedAt: new Date().toISOString(),
+      revision: result.revision + 1,
+      syncState: 'pending',
+    };
+    const scanUsageCount = settings.scanUsageCount + 1;
+    await database.results.put(nextResult);
+    await database.settings.put({
+      ...settings,
+      scanUsageCount,
+      updatedAt: new Date().toISOString(),
+    });
+    return { result: nextResult, scanUsageCount };
+  });
+  notifyDataChange();
+  return saved;
+}
+
 export async function deleteResult(id: string): Promise<void> {
   await database.results.delete(id);
   notifyDataChange();
 }
 
 export async function getSettings(): Promise<AppSettings> {
-  return (await database.settings.get('app')) ?? defaultSettings;
+  const stored = await database.settings.get('app');
+  if (!stored) return defaultSettings;
+  const parsed = settingsSchema.safeParse(stored);
+  return parsed.success ? parsed.data : defaultSettings;
 }
 
 export async function saveSettings(settings: AppSettings): Promise<AppSettings> {

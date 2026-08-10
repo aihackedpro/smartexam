@@ -67,11 +67,9 @@
 
 .sheet-marker {
   position: absolute;
-  width: 14px;
-  height: 14px;
-  border: 2px solid #000;
+  width: 16px;
+  height: 16px;
   background: #000;
-  box-shadow: inset 0 0 0 3px #fff;
 }
 
 .answer-bubble {
@@ -116,6 +114,54 @@
     padding: 10mm;
     overflow: visible;
     box-shadow: none !important;
+  }
+
+  .sheet-marker {
+    width: 4mm;
+    height: 4mm;
+  }
+
+  .sheet-header {
+    height: 22mm;
+    overflow: hidden;
+  }
+
+  .sheet-student {
+    height: 8mm;
+    margin-top: 4mm !important;
+  }
+
+  .answer-grid {
+    display: grid !important;
+    grid-auto-flow: column;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(30, 7mm);
+    gap: 0 7mm !important;
+    margin-top: 6mm !important;
+  }
+
+  .answer-row {
+    height: 7mm;
+    padding-block: 0 !important;
+  }
+
+  .answer-bubble {
+    width: 4mm;
+    height: 4mm;
+    border-width: 0.45mm;
+  }
+
+  .choice-label {
+    font-size: 2.5mm;
+  }
+
+  .print-sheet > footer {
+    position: absolute;
+    right: 10mm;
+    bottom: 5mm;
+    left: 10mm;
+    margin-top: 0 !important;
+    background: #fff;
   }
 
   .no-print {

@@ -4,18 +4,47 @@
 ให้เครดิตผู้พัฒนาระบบ
 */
 
-import { AlertTriangle, Camera, Check, RotateCcw, Save, ScanLine } from 'lucide-react';
+import {
+  AlertTriangle,
+  Camera,
+  Check,
+  ClipboardPlus,
+  LoaderCircle,
+  LockKeyhole,
+  RotateCcw,
+  Save,
+  ScanLine,
+  Sparkles,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader';
 import { StatusBadge } from '../../components/StatusBadge';
-import { listExams, saveResult } from '../../database/repository';
+import {
+  freeScanLimit,
+  getSettings,
+  listExams,
+  saveNewScanResult,
+  ScanLimitReachedError,
+} from '../../database/repository';
 import { useStoredData } from '../../hooks/useStoredData';
 import { createId } from '../../lib/identifiers';
-import type { Exam, MarkedAnswer } from '../../types/domain';
+import type { AppSettings, Exam, MarkedAnswer } from '../../types/domain';
 import { scoreAnswers } from '../results/scoring';
+import { analyzeAnswerSheet } from './omr';
 
 const loadExams = () => listExams();
+const loadSettings = () => getSettings();
 const choiceLabels = ['ก', 'ข', 'ค', 'ง', 'จ'];
+const initialSettings: AppSettings = {
+  id: 'app',
+  schoolName: '',
+  teacherName: '',
+  licenseStatus: 'demo',
+  activationHint: '',
+  scanUsageCount: 0,
+  updatedAt: new Date(0).toISOString(),
+};
 
 function createBlankAnswers(exam: Exam): readonly MarkedAnswer[] {
   return exam.questions.map((question) => ({
@@ -28,15 +57,23 @@ function createBlankAnswers(exam: Exam): readonly MarkedAnswer[] {
 
 export function ScannerPage() {
   const { data: exams, loading } = useStoredData(loadExams, [] as readonly Exam[]);
+  const { data: settings } = useStoredData(loadSettings, initialSettings);
   const [examId, setExamId] = useState('');
   const [examineeCode, setExamineeCode] = useState('');
   const [answers, setAnswers] = useState<readonly MarkedAnswer[]>([]);
   const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [analysisState, setAnalysisState] = useState<'idle' | 'analyzing' | 'complete' | 'error'>(
+    'idle',
+  );
   const [message, setMessage] = useState('');
+  const [showActivation, setShowActivation] = useState(false);
   const selectedExam = useMemo(
     () => exams.find((exam) => exam.id === examId) ?? exams[0],
     [examId, exams],
   );
+  const quotaReached =
+    settings.licenseStatus !== 'activated' && settings.scanUsageCount >= freeScanLimit;
 
   useEffect(
     () => () => {
@@ -45,14 +82,45 @@ export function ScannerPage() {
     [imageUrl],
   );
 
+  async function analyzeFile(file: File): Promise<void> {
+    if (!selectedExam) return;
+    if (quotaReached) {
+      setShowActivation(true);
+      return;
+    }
+    setAnalysisState('analyzing');
+    setMessage('กำลังค้นหาจุดอ้างอิงและอ่านวงคำตอบ…');
+    try {
+      const analysis = await analyzeAnswerSheet(file, selectedExam);
+      setAnswers(analysis.answers);
+      setAnalysisState('complete');
+      const ambiguous = analysis.answers.filter((answer) => answer.status === 'ambiguous').length;
+      setMessage(
+        ambiguous > 0
+          ? `อ่านภาพสำเร็จ ความมั่นใจเฉลี่ย ${(analysis.averageConfidence * 100).toFixed(0)}% • มี ${ambiguous} ข้อให้ครูยืนยัน`
+          : `อ่านภาพสำเร็จ ความมั่นใจเฉลี่ย ${(analysis.averageConfidence * 100).toFixed(0)}% • พร้อมบันทึกคะแนน`,
+      );
+    } catch (error) {
+      setAnswers(createBlankAnswers(selectedExam));
+      setAnalysisState('error');
+      setMessage(error instanceof Error ? error.message : 'วิเคราะห์ภาพไม่สำเร็จ กรุณาถ่ายใหม่');
+    }
+  }
+
   function handleImage(file: File | undefined): void {
     if (!file) return;
+    if (quotaReached) {
+      setShowActivation(true);
+      return;
+    }
     if (imageUrl) URL.revokeObjectURL(imageUrl);
     setImageUrl(URL.createObjectURL(file));
-    setMessage('แนบภาพแล้ว กรุณาเทียบภาพและยืนยันคำตอบทีละข้อ');
+    setImageFile(file);
+    void analyzeFile(file);
   }
 
   function updateAnswer(questionId: string, update: Partial<MarkedAnswer>): void {
+    setAnalysisState('complete');
     setAnswers((current) => {
       const source =
         selectedExam && current.length === selectedExam.questions.length
@@ -67,32 +135,48 @@ export function ScannerPage() {
   }
 
   async function handleSave(): Promise<void> {
-    if (!selectedExam) return;
+    if (!selectedExam || analysisState !== 'complete') return;
     const currentAnswers =
       answers.length === selectedExam.questions.length ? answers : createBlankAnswers(selectedExam);
     const summary = scoreAnswers(selectedExam, currentAnswers);
     const timestamp = new Date().toISOString();
     const needsReview = currentAnswers.some((answer) => answer.status === 'ambiguous');
-    await saveResult({
-      id: createId('result'),
-      examId: selectedExam.id,
-      examineeCode: examineeCode.trim() || `ไม่ระบุ-${Date.now().toString().slice(-4)}`,
-      answers: currentAnswers,
-      score: summary.score,
-      maxScore: summary.maxScore,
-      reviewStatus: needsReview ? 'needs-review' : 'complete',
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      revision: 0,
-      syncState: 'local',
-    });
-    setMessage(
-      needsReview
-        ? `บันทึกคะแนน ${summary.score}/${summary.maxScore} และส่งรายการกำกวมไปรอตรวจแล้ว`
-        : `บันทึกผลเรียบร้อย คะแนน ${summary.score}/${summary.maxScore}`,
-    );
-    setExamineeCode('');
-    setAnswers(createBlankAnswers(selectedExam));
+    try {
+      const saved = await saveNewScanResult({
+        id: createId('result'),
+        examId: selectedExam.id,
+        examineeCode: examineeCode.trim() || `ไม่ระบุ-${Date.now().toString().slice(-4)}`,
+        answers: currentAnswers,
+        score: summary.score,
+        maxScore: summary.maxScore,
+        reviewStatus: needsReview ? 'needs-review' : 'complete',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        revision: 0,
+        syncState: 'local',
+      });
+      setMessage(
+        needsReview
+          ? `บันทึกแผ่นที่ ${saved.scanUsageCount} คะแนน ${summary.score}/${summary.maxScore} และส่งข้อกำกวมไปรอตรวจแล้ว`
+          : `บันทึกแผ่นที่ ${saved.scanUsageCount} เรียบร้อย คะแนน ${summary.score}/${summary.maxScore}`,
+      );
+      setExamineeCode('');
+      setAnswers(createBlankAnswers(selectedExam));
+      setAnalysisState('idle');
+      setImageFile(null);
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
+      setImageUrl('');
+      if (saved.scanUsageCount >= freeScanLimit && settings.licenseStatus !== 'activated') {
+        setShowActivation(true);
+      }
+    } catch (error) {
+      if (error instanceof ScanLimitReachedError) {
+        setShowActivation(true);
+        setMessage(error.message);
+      } else {
+        setMessage('บันทึกผลไม่สำเร็จ กรุณาลองอีกครั้ง');
+      }
+    }
   }
 
   const currentAnswers =
@@ -103,23 +187,31 @@ export function ScannerPage() {
         : [];
   const ambiguousCount = currentAnswers.filter((answer) => answer.status === 'ambiguous').length;
   const confirmedCount = currentAnswers.filter((answer) => answer.status === 'confirmed').length;
+  const unansweredCount = currentAnswers.filter((answer) => answer.status === 'unanswered').length;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="ตรวจด้วยมือถืออย่างปลอดภัย"
+        eyebrow="OMR ตรวจด้วยมือถือ"
         title="สแกนตรวจ"
-        description="ถ่ายหรือเลือกภาพกระดาษคำตอบ แล้วเทียบภาพเพื่อยืนยันคำตอบ ระบบจะไม่เดาคำตอบที่ไม่ชัดเจน"
+        description="ถ่ายกระดาษคำตอบ SmartExam ระบบค้นหาจุดสี่มุม อ่านวงคำตอบ คำนวณคะแนน และส่งเฉพาะข้อที่ไม่ชัดให้ครูยืนยัน"
         icon={ScanLine}
+        action={
+          <StatusBadge tone={settings.licenseStatus === 'activated' ? 'success' : 'warning'}>
+            {settings.licenseStatus === 'activated'
+              ? 'ไม่จำกัดจำนวนแผ่น'
+              : `ใช้ฟรี ${settings.scanUsageCount}/${freeScanLimit} แผ่น`}
+          </StatusBadge>
+        }
       />
 
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
         <p className="flex items-start gap-2 font-bold">
-          <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={20} />
-          โหมดช่วยตรวจแบบครูยืนยัน
+          <Sparkles aria-hidden="true" className="mt-0.5 shrink-0" size={20} />
+          อ่านคำตอบอัตโนมัติและตรวจซ้ำได้
         </p>
         <p className="mt-1 pl-7">
-          ภาพใช้แสดงชั่วคราวบนหน้าจอนี้และไม่ถูกเก็บในฐานข้อมูล หากช่องใดอ่านไม่ชัดให้กด “รอตรวจ”
+          ระบบให้คะแนนเฉพาะวงที่มั่นใจ ภาพใช้วิเคราะห์ในเครื่องและไม่ถูกเก็บในฐานข้อมูล
         </p>
       </div>
 
@@ -129,9 +221,19 @@ export function ScannerPage() {
         </p>
       ) : null}
       {!loading && exams.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600">
-          กรุณาสร้างข้อสอบและเฉลยก่อนเริ่มตรวจ
-        </p>
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-6 text-center sm:p-10">
+          <ClipboardPlus aria-hidden="true" className="mx-auto text-navy-700" size={38} />
+          <h2 className="mt-3 text-xl font-extrabold text-navy-900">สร้างข้อสอบก่อนเริ่มสแกน</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            ระบบต้องใช้เฉลยและตำแหน่งวงคำตอบของข้อสอบเพื่อคำนวณคะแนน
+          </p>
+          <Link
+            to="/exams"
+            className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 font-bold text-white hover:bg-emerald-700"
+          >
+            <ClipboardPlus aria-hidden="true" size={20} /> สร้างข้อสอบใหม่
+          </Link>
+        </div>
       ) : null}
 
       {selectedExam ? (
@@ -145,6 +247,7 @@ export function ScannerPage() {
                   const nextExam = exams.find((exam) => exam.id === event.target.value);
                   setExamId(event.target.value);
                   setAnswers(nextExam ? createBlankAnswers(nextExam) : []);
+                  setAnalysisState('idle');
                   setMessage('');
                 }}
                 className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
@@ -167,14 +270,44 @@ export function ScannerPage() {
             </label>
             <label className="sm:col-span-2">
               <span className="mb-1.5 block text-sm font-bold text-slate-700">ภาพกระดาษคำตอบ</span>
-              <span className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50 px-4 font-bold text-emerald-800 hover:bg-emerald-100">
-                <Camera aria-hidden="true" size={22} /> ถ่ายภาพหรือเลือกจากเครื่อง
+              <span
+                role={quotaReached ? 'button' : undefined}
+                tabIndex={quotaReached ? 0 : undefined}
+                onClick={() => {
+                  if (quotaReached) setShowActivation(true);
+                }}
+                onKeyDown={(event) => {
+                  if (quotaReached && (event.key === 'Enter' || event.key === ' ')) {
+                    event.preventDefault();
+                    setShowActivation(true);
+                  }
+                }}
+                className={`flex min-h-14 items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 font-bold ${
+                  quotaReached
+                    ? 'cursor-not-allowed border-slate-300 bg-slate-100 text-slate-500'
+                    : 'cursor-pointer border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                }`}
+              >
+                {analysisState === 'analyzing' ? (
+                  <LoaderCircle aria-hidden="true" className="animate-spin" size={22} />
+                ) : (
+                  <Camera aria-hidden="true" size={22} />
+                )}
+                {analysisState === 'analyzing'
+                  ? 'กำลังอ่านคำตอบ…'
+                  : quotaReached
+                    ? 'ครบสิทธิ์ฟรีแล้ว'
+                    : 'ถ่ายภาพและตรวจทันที'}
                 <input
                   type="file"
                   accept="image/*"
                   capture="environment"
+                  disabled={quotaReached || analysisState === 'analyzing'}
                   className="sr-only"
-                  onChange={(event) => handleImage(event.target.files?.[0])}
+                  onChange={(event) => {
+                    handleImage(event.target.files?.[0]);
+                    event.target.value = '';
+                  }}
                 />
               </span>
             </label>
@@ -184,28 +317,49 @@ export function ScannerPage() {
             <figure className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-900 p-2 shadow-soft">
               <img
                 src={imageUrl}
-                alt="ภาพกระดาษคำตอบสำหรับเทียบคำตอบ"
+                alt="ภาพกระดาษคำตอบที่ระบบกำลังวิเคราะห์"
                 className="mx-auto max-h-[60vh] rounded-2xl object-contain"
               />
-              <figcaption className="p-2 text-center text-xs text-white">
-                ภาพนี้จะไม่ถูกบันทึกเมื่อออกจากหน้า
+              <figcaption className="flex flex-wrap items-center justify-center gap-3 p-2 text-center text-xs text-white">
+                <span>ภาพนี้ไม่ถูกบันทึกเมื่อออกจากหน้า</span>
+                {imageFile && analysisState !== 'analyzing' ? (
+                  <button
+                    type="button"
+                    onClick={() => void analyzeFile(imageFile)}
+                    className="min-h-10 rounded-lg bg-white/15 px-3 font-bold hover:bg-white/25"
+                  >
+                    วิเคราะห์ภาพอีกครั้ง
+                  </button>
+                ) : null}
               </figcaption>
             </figure>
+          ) : null}
+
+          {message ? (
+            <p
+              role={analysisState === 'error' ? 'alert' : 'status'}
+              className={`rounded-xl p-4 font-semibold ${
+                analysisState === 'error' ? 'bg-rose-50 text-rose-800' : 'bg-navy-50 text-navy-900'
+              }`}
+            >
+              {message}
+            </p>
           ) : null}
 
           <section aria-labelledby="review-heading" className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-emerald-700">ยืนยันผลอ่าน</p>
+                <p className="text-sm font-semibold text-emerald-700">ผลอ่าน OMR</p>
                 <h2 id="review-heading" className="text-xl font-extrabold text-navy-900">
                   คำตอบ {selectedExam.questions.length} ข้อ
                 </h2>
               </div>
-              <div className="flex gap-2">
-                <StatusBadge tone="success">ยืนยัน {confirmedCount}</StatusBadge>
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge tone="success">อ่านได้ {confirmedCount}</StatusBadge>
                 <StatusBadge tone={ambiguousCount ? 'warning' : 'neutral'}>
                   รอตรวจ {ambiguousCount}
                 </StatusBadge>
+                <StatusBadge tone="neutral">ว่าง {unansweredCount}</StatusBadge>
               </div>
             </div>
 
@@ -214,7 +368,9 @@ export function ScannerPage() {
               return (
                 <article
                   key={question.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4"
+                  className={`rounded-2xl border bg-white p-4 ${
+                    answer?.status === 'ambiguous' ? 'border-amber-300' : 'border-slate-200'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -231,9 +387,9 @@ export function ScannerPage() {
                       }
                     >
                       {answer?.status === 'ambiguous'
-                        ? 'รอตรวจ'
+                        ? 'ครูต้องยืนยัน'
                         : answer?.status === 'confirmed'
-                          ? 'ยืนยันแล้ว'
+                          ? `${Math.round((answer.confidence ?? 1) * 100)}%`
                           : 'เว้นว่าง'}
                     </StatusBadge>
                   </div>
@@ -282,7 +438,7 @@ export function ScannerPage() {
                         updateAnswer(question.id, {
                           choice: null,
                           status: 'unanswered',
-                          confidence: null,
+                          confidence: 1,
                         })
                       }
                       className="inline-flex min-h-12 items-center justify-center gap-1 rounded-xl bg-slate-100 px-2 text-sm font-bold text-slate-700 hover:bg-slate-200"
@@ -295,16 +451,11 @@ export function ScannerPage() {
             })}
           </section>
 
-          {message ? (
-            <p role="status" className="rounded-xl bg-navy-50 p-4 font-semibold text-navy-900">
-              {message}
-            </p>
-          ) : null}
-
           <button
             type="button"
+            disabled={analysisState !== 'complete' || quotaReached}
             onClick={() => void handleSave()}
-            className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-lg font-extrabold text-white shadow-emerald transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
+            className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-lg font-extrabold text-white shadow-emerald transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {ambiguousCount ? (
               <AlertTriangle aria-hidden="true" size={22} />
@@ -314,6 +465,43 @@ export function ScannerPage() {
             <Save aria-hidden="true" size={21} /> บันทึกผลตรวจ
           </button>
         </>
+      ) : null}
+
+      {showActivation ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="activation-title"
+            className="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-2xl"
+          >
+            <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-amber-50 text-amber-700">
+              <LockKeyhole aria-hidden="true" size={29} />
+            </span>
+            <p className="mt-4 text-sm font-bold text-amber-700">ครบสิทธิ์ใช้ฟรี 10 แผ่น</p>
+            <h2 id="activation-title" className="mt-1 text-2xl font-extrabold text-navy-900">
+              Activate เพื่อสแกนต่อ
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              ข้อสอบและผลตรวจเดิมยังเปิดดูได้ตามปกติ การ Activate จะปลดจำกัดจำนวนแผ่นบนอุปกรณ์นี้
+            </p>
+            <Link
+              to="/more"
+              className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-navy-800 px-4 font-bold text-white hover:bg-navy-900"
+            >
+              <LockKeyhole aria-hidden="true" size={20} /> ไปหน้า Activate
+            </Link>
+            {!quotaReached ? (
+              <button
+                type="button"
+                onClick={() => setShowActivation(false)}
+                className="mt-2 min-h-12 w-full rounded-xl font-bold text-slate-600 hover:bg-slate-100"
+              >
+                ปิด
+              </button>
+            ) : null}
+          </section>
+        </div>
       ) : null}
     </div>
   );

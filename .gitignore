@@ -4,6 +4,7 @@ node_modules/
 # Build and test output
 dist/
 coverage/
+release/
 
 # Local environment files
 .env
@@ -14,6 +15,9 @@ coverage/
 .smartexam-secrets/
 *.private.jwk
 *.license-authority-backup.json
+*.jks
+*.keystore
+android/key.properties
 
 # Editor and operating system files
 .DS_Store

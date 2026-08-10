@@ -1,4 +1,7 @@
 dist
 coverage
 node_modules
+android
+ios
+release
 package-lock.json

@@ -14,6 +14,7 @@ import {
   WifiOff,
   X,
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { useState, useSyncExternalStore } from 'react';
 import { detectInstallPlatform, type InstallPlatform } from '../lib/installPlatform';
 import { getPwaInstallSnapshot, requestPwaInstall, subscribePwaInstall } from '../lib/pwaInstall';
@@ -23,6 +24,9 @@ interface InstallGuide {
   readonly introduction: string;
   readonly steps: readonly string[];
 }
+
+const androidApkUrl =
+  'https://github.com/aihackedpro/smartexam/releases/download/v1.0.0/SmartExam-1.0.0-Android.apk';
 
 const installGuides: Readonly<Record<InstallPlatform, InstallGuide>> = {
   ios: {
@@ -68,6 +72,7 @@ export function InstallPrompt() {
   const [installing, setInstalling] = useState(false);
   const platform = detectInstallPlatform();
   const guide = installGuides[platform];
+  const installedAsNativeApp = Capacitor.isNativePlatform();
 
   async function handleInstall(): Promise<void> {
     if (!canPrompt) {
@@ -112,9 +117,10 @@ export function InstallPrompt() {
           </div>
         </div>
 
-        {installed ? (
+        {installed || installedAsNativeApp ? (
           <p className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-emerald-100 px-5 font-extrabold text-emerald-800 ring-1 ring-emerald-300">
-            <CheckCircle2 aria-hidden="true" size={22} /> ติดตั้งเรียบร้อยแล้ว
+            <CheckCircle2 aria-hidden="true" size={22} />
+            {installedAsNativeApp ? 'กำลังใช้งาน Application' : 'ติดตั้งเรียบร้อยแล้ว'}
           </p>
         ) : (
           <button
@@ -133,6 +139,16 @@ export function InstallPrompt() {
         <WifiOff aria-hidden="true" className="text-emerald-700" size={17} />
         ฟรี • ไม่ต้องดาวน์โหลดไฟล์ติดตั้ง • ข้อมูลข้อสอบอยู่ในเครื่องของคุณ
       </p>
+
+      {!installedAsNativeApp ? (
+        <a
+          href={androidApkUrl}
+          className="relative mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-navy-200 bg-white px-4 text-sm font-extrabold text-navy-800 transition hover:border-navy-400 hover:bg-navy-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 sm:w-auto"
+        >
+          <Download aria-hidden="true" size={19} />
+          ดาวน์โหลดไฟล์ Android (.apk)
+        </a>
+      ) : null}
 
       {showHelp ? (
         <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-sm">

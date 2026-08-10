@@ -17,6 +17,7 @@ SmartExam คือ Progressive Web App แบบ mobile-first สำหรั�
 - Dexie สำหรับ IndexedDB แบบ local-first พร้อม migration และ transaction
 - Zod สำหรับตรวจรูปแบบค่ากำหนด
 - vite-plugin-pwa สำหรับ manifest, service worker และ offline app shell
+- Capacitor สำหรับแพ็ก Web Application เป็น Android และ iOS Application
 - Vitest และ Testing Library สำหรับ automated tests
 - ESLint และ Prettier สำหรับคุณภาพและรูปแบบโค้ด
 
@@ -46,6 +47,11 @@ npm run license:status # ตรวจ private signing key ใน macOS Keychain
 npm run license:admin  # เปิดศูนย์ออก Activate Key สำหรับเจ้าของบนเครื่องนี้
 npm run license:issue -- --device "SME-D1-..." --plan year # ออก Activate Key
 npm run build        # ตรวจ TypeScript และสร้าง production build
+npm run native:sync  # สร้างเว็บ production และซิงก์เข้าโครงการ Android/iOS
+npm run android:apk  # สร้าง Android debug APK สำหรับทดสอบ
+npm run android:signing:setup # สร้างกุญแจเซ็น Android release (ทำครั้งแรกครั้งเดียว)
+npm run android:release # สร้าง APK และ AAB ที่เซ็นสำหรับเผยแพร่
+npm run ios:sync     # ซิงก์ production web assets เข้าโครงการ iOS
 npm run format       # จัดรูปแบบไฟล์ด้วย Prettier
 npm run format:check # ตรวจรูปแบบโดยไม่แก้ไฟล์
 ```
@@ -73,7 +79,8 @@ docs/                    # เอกสารผลิตภัณฑ์แล�
 รายละเอียดเพิ่มเติมอยู่ใน [ข้อกำหนดผลิตภัณฑ์](docs/PRODUCT_REQUIREMENTS.md),
 [สถาปัตยกรรม](docs/ARCHITECTURE.md), [แผนงาน](docs/ROADMAP.md) และ
 [กลยุทธ์การทดสอบ](docs/TESTING_STRATEGY.md) รวมถึง
-[ความปลอดภัยของระบบ License](docs/LICENSING_SECURITY.md)
+[ความปลอดภัยของระบบ License](docs/LICENSING_SECURITY.md) และ
+[คู่มือ Web, Android และ iOS](docs/NATIVE_APPS.md)
 
 ## ความสามารถหลัก
 
@@ -90,6 +97,7 @@ docs/                    # เอกสารผลิตภัณฑ์แล�
 Production build จะสร้าง web app manifest และ service worker เพื่อ cache app shell
 หลังเปิดระบบออนไลน์สำเร็จอย่างน้อยหนึ่งครั้ง แอปสามารถเปิดหน้าพื้นฐานที่เคยติดตั้งไว้ได้เมื่อออฟไลน์
 หน้าแรกมีปุ่มติดตั้งขนาดใหญ่ โดยเปิด native install prompt อัตโนมัติเมื่อเบราว์เซอร์รองรับ และแสดงขั้นตอนเฉพาะ iOS, Android หรือคอมพิวเตอร์เมื่อจำเป็น
+ผู้ใช้ Android สามารถดาวน์โหลด APK ที่เซ็นแล้วจากปุ่มสำรองบนการ์ดเดียวกัน
 ฟอนต์ Noto Sans Thai ใช้ Google Fonts และจะถูก runtime cache หลังโหลดสำเร็จ
 
 ## ขอบเขตความปลอดภัย

@@ -5,6 +5,7 @@
 */
 
 import { createId } from '../../lib/identifiers';
+import { maxQuestionsPerAnswerSheet } from '../../lib/answerSheetLayout';
 import type { Exam, Question } from '../../types/domain';
 
 export interface ExamValidationIssue {
@@ -49,6 +50,13 @@ export function validateExam(exam: Exam): readonly ExamValidationIssue[] {
 
   if (exam.questions.length === 0) {
     issues.push({ field: 'questions', message: 'ข้อสอบต้องมีอย่างน้อย 1 ข้อ' });
+  }
+
+  if (exam.questions.length > maxQuestionsPerAnswerSheet) {
+    issues.push({
+      field: 'questions',
+      message: `กระดาษคำตอบหนึ่งแผ่นรองรับสูงสุด ${maxQuestionsPerAnswerSheet} ข้อ กรุณาแบ่งเป็นหลายชุด`,
+    });
   }
 
   exam.questions.forEach((question, index) => {

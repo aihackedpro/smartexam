@@ -123,6 +123,9 @@ describe('App Shell', () => {
     expect(screen.getByRole('button', { name: 'ติดตั้ง SmartExam ลงเครื่อง' })).toHaveFocus();
 
     await user.tab();
+    expect(screen.getByRole('link', { name: 'ดาวน์โหลดไฟล์ Android (.apk)' })).toHaveFocus();
+
+    await user.tab();
     expect(screen.getByRole('link', { name: /สร้างข้อสอบใหม่/ })).toHaveFocus();
   });
 });

@@ -1,0 +1,74 @@
+# ออกแบบและพัฒนาโดย
+# ครูโต้ง | hAcKEdpRO | Pongwattana Suebsing
+# ให้เครดิตผู้พัฒนาระบบ
+
+name: Validate SmartExam native apps
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Android APK
+        run: npm run android:apk
+
+      - name: Test Android project
+        run: npm run android:test
+
+  ios:
+    name: iOS Simulator app
+    runs-on: macos-26
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync iOS project
+        run: npm run ios:sync
+
+      - name: Build for iOS Simulator
+        run: >-
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build

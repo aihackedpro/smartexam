@@ -13,10 +13,24 @@
     "license:status": "node scripts/license-authority.mjs status",
     "license:issue": "node scripts/license-authority.mjs issue",
     "license:admin": "node scripts/license-admin-server.mjs",
+    "native:sync": "npm run build && cap sync",
+    "native:doctor": "cap doctor",
+    "native:assets": "bash scripts/generate-native-assets.sh",
+    "android:apk": "npm run native:sync && cd android && ./gradlew assembleDebug",
+    "android:signing:setup": "bash scripts/setup-android-signing.sh",
+    "android:release": "bash scripts/build-android-release.sh all",
+    "android:bundle": "bash scripts/build-android-release.sh bundle",
+    "android:test": "cd android && ./gradlew testDebugUnitTest",
+    "android:open": "cap open android",
+    "ios:sync": "npm run build && cap sync ios",
+    "ios:open": "cap open ios",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
     "dexie": "^4.4.4",
     "lucide-react": "^1.28.0",
     "react": "^19.2.8",
@@ -25,6 +39,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.2",
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.0",

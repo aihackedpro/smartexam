@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SmartExam</string>
+    <string name="title_activity_main">SmartExam</string>
+    <string name="package_name">com.hackedpro.smartexam</string>
+    <string name="custom_url_scheme">com.hackedpro.smartexam</string>
+</resources>

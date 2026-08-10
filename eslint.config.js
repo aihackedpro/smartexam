@@ -12,7 +12,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage', 'node_modules']),
+  globalIgnores(['dist', 'coverage', 'node_modules', 'android', 'ios', 'release']),
   eslint.configs.recommended,
   ...tseslint.configs.strict,
   reactHooks.configs.flat.recommended,

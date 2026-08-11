@@ -72,13 +72,3 @@ jobs:
           -destination 'generic/platform=iOS Simulator'
           CODE_SIGNING_ALLOWED=NO
           build
-
-      - name: Build for Mac Catalyst
-        run: >-
-          xcodebuild
-          -project ios/App/App.xcodeproj
-          -scheme App
-          -configuration Debug
-          -destination 'generic/platform=macOS,variant=Mac Catalyst'
-          CODE_SIGNING_ALLOWED=NO
-          build

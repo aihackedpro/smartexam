@@ -8,6 +8,7 @@ set -euo pipefail
 
 build_mode="${1:-all}"
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+release_version="$(node -p "require('$project_root/package.json').version")"
 keychain_account="smartexam-release"
 keychain_service="com.hackedpro.smartexam.android-signing"
 default_keystore="$HOME/Library/Application Support/SmartExam Android Signing/smartexam-release.jks"
@@ -52,13 +53,13 @@ fi
 mkdir -p "$project_root/release"
 if [ "$build_mode" = "all" ] || [ "$build_mode" = "apk" ]; then
   cp "$project_root/android/app/build/outputs/apk/release/app-release.apk" \
-    "$project_root/release/SmartExam-1.0.0-Android.apk"
-  shasum -a 256 "$project_root/release/SmartExam-1.0.0-Android.apk"
+    "$project_root/release/SmartExam-$release_version-Android.apk"
+  shasum -a 256 "$project_root/release/SmartExam-$release_version-Android.apk"
 fi
 if [ "$build_mode" = "all" ] || [ "$build_mode" = "bundle" ]; then
   cp "$project_root/android/app/build/outputs/bundle/release/app-release.aab" \
-    "$project_root/release/SmartExam-1.0.0-Android.aab"
-  shasum -a 256 "$project_root/release/SmartExam-1.0.0-Android.aab"
+    "$project_root/release/SmartExam-$release_version-Android.aab"
+  shasum -a 256 "$project_root/release/SmartExam-$release_version-Android.aab"
 fi
 
 unset SMARTEXAM_ANDROID_KEYSTORE_PASSWORD
